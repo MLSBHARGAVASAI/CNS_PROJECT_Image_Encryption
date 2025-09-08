@@ -3,39 +3,200 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Encrypt to PNG on A → Decrypt on B</title>
+  <title>Image Encryption Lamp Demo (Secure PNG)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&display=swap" rel="stylesheet">
   <style>
     html, body { 
+      overflow: hidden; 
       height: 100%; 
       margin: 0; 
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f1216;
-      color: #e5e7eb;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%, #0a0a0a 100%);
+      background-size: 400% 400%;
+      animation: subtleShift 15s ease infinite;
     }
     
-    .container {
-      max-width: 560px;
-      margin: 40px auto;
-      padding: 24px;
+    @keyframes subtleShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
     }
     
-    .title {
-      font-size: 22px;
-      font-weight: 800;
-      margin-bottom: 12px;
+    #turnon::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 15% 25%, rgba(20, 184, 166, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 85% 75%, rgba(251, 146, 60, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 45% 60%, rgba(20, 184, 166, 0.05) 0%, transparent 40%);
+      animation: floatShapes 20s ease-in-out infinite;
+      pointer-events: none;
     }
-    .subtitle { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
     
-    .card {
-      background: #12171d;
-      border: 1px solid #263241;
-      border-radius: 12px;
-      padding: 20px;
+    @keyframes floatShapes {
+      0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.3; }
+      33% { transform: translateY(-20px) rotate(120deg); opacity: 0.6; }
+      66% { transform: translateY(10px) rotate(240deg); opacity: 0.4; }
+    }
+    
+    #turnon { 
+      width: 100%; 
+      height: 100%; 
+      display: block; 
+      background: 
+        radial-gradient(circle at 30% 70%, rgba(20, 184, 166, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 70% 30%, rgba(251, 146, 60, 0.03) 0%, transparent 50%),
+        linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(26, 26, 26, 0.95) 100%);
+      position: relative;
+    }
+    
+    .lamp, .turnoff {
+      width: 60px; 
+      height: 60px; 
+      top: 20px; 
+      left: 50%; 
+      margin-left: -30px;
+      position: absolute; 
+      border-bottom: 60px solid #14b8a6;
+      border-left: 30px solid transparent; 
+      border-right: 30px solid transparent;
+      height: 0; 
+      z-index: 11; 
+      cursor: pointer; 
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      filter: drop-shadow(0 4px 20px rgba(20, 184, 166, 0.3));
+    }
+    
+    .lamp:hover { 
+      border-bottom-color: #0d9488;
+      transform: scale(1.05) translateY(-2px);
+      filter: drop-shadow(0 6px 25px rgba(20, 184, 166, 0.4));
+    }
+    
+    .turnoff { 
+      display: none; 
+      border-bottom-color: #fb923c;
+    } 
+    
+    .turnoff:hover { 
+      border-bottom-color: #f97316;
+    }
+    
+    .bulb { 
+      position: absolute; 
+      top: 90px; 
+      left: 50%; 
+      height: 20px; 
+      width: 20px;
+      margin-left: -10px; 
+      background: linear-gradient(135deg, #374151, #4b5563, #6b7280);
+      border-radius: 50%; 
+      z-index: 9; 
+      transition: all 0.3s ease;
+      box-shadow: 
+        0 2px 10px rgba(0,0,0,0.3),
+        inset 0 1px 2px rgba(255,255,255,0.1);
+    }
+    
+    .string { 
+      position: absolute; 
+      top: 90px; 
+      left: 50%; 
+      margin-left: 15px;
+      height: 60px; 
+      width: 1px; 
+      background: #4b5563;
+      display: block; 
+      z-index: 10;
+    }
+    
+    .illumination {
+      position: absolute;
+      top: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      background: radial-gradient(ellipse at center top, 
+        rgba(251, 146, 60, 0.15) 0%, 
+        rgba(251, 146, 60, 0.08) 30%, 
+        rgba(251, 146, 60, 0.03) 60%, 
+        transparent 100%);
+      border-radius: 50%;
+      opacity: 0;
+      transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 5;
+      pointer-events: none;
+    }
+    
+    .login-text { 
+      position: absolute; 
+      top: 45%; 
+      left: 50%; 
+      transform: translateX(-50%);
+      color: #f8fafc; 
+      font-size: 32px; 
+      font-weight: 800; 
+      z-index: 12; 
+      transition: all 0.6s ease; 
+      pointer-events: none; 
+      letter-spacing: 4px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      display: block;
+      font-size: 14px;
+      font-weight: 400;
+      margin-top: 16px;
+      opacity: 0.7;
+      letter-spacing: 2px;
+      color: #94a3b8;
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+    }
+    
+    .login-form { 
+      position: absolute; 
+      top: 65%; 
+      left: 50%; 
+      transform: translate(-50%, -50%) translateY(30px);
+      background: rgba(26, 26, 26, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(75, 85, 99, 0.3);
+      padding: 40px; 
+      border-radius: 16px;
+      box-shadow: 
+        0 20px 40px rgba(0,0,0,0.4),
+        0 1px 0 rgba(255,255,255,0.05); 
+      opacity: 0; 
+      visibility: hidden;
+      transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); 
+      z-index: 15; 
+      width: 420px; 
+      text-align: center;
+    }
+    
+    .login-form h2 { 
+      color: #f8fafc;
+      margin-bottom: 12px; 
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .login-form p.explain {
+      color: #cbd5e1;
+      font-size: 13px;
+      margin-bottom: 18px;
+      opacity: 0.9;
     }
     
     .form-group { 
-      margin-bottom: 16px; 
+      margin-bottom: 24px; 
       text-align: left; 
     }
     
@@ -49,9 +210,9 @@
     
     .form-group input, select {
       width: 100%; 
-      padding: 12px; 
-      border: 1px solid #3a4758;
-      background: #0f141a;
+      padding: 16px; 
+      border: 1px solid #374151;
+      background: rgba(17, 17, 17, 0.8);
       border-radius: 8px;
       font-size: 14px; 
       box-sizing: border-box;
@@ -59,65 +220,309 @@
       color: #f8fafc;
       font-family: inherit;
     }
-    .form-group input:focus, select:focus { border-color: #14b8a6; outline: none; }
+    
+    .form-group input:focus, select:focus {
+      outline: none;
+      border-color: #14b8a6;
+      background: rgba(17, 17, 17, 0.95);
+      box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+    }
+    
+    .form-group input::placeholder {
+      color: #6b7280;
+    }
     
     button { 
       width: 100%; 
-      padding: 12px; 
-      background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+      padding: 16px; 
+      background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
       color: white; 
       border: none; 
       border-radius: 8px; 
-      font-size: 15px; 
+      font-size: 16px; 
       font-weight: 600;
       cursor: pointer; 
       transition: all 0.2s ease; 
-      margin-top: 12px;
+      margin-top: 24px;
       font-family: inherit;
     }
-    button:hover { opacity: 0.95; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    button:hover { 
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
+    }
     
     .preview { 
-      margin-top: 16px; 
+      margin-top: 24px; 
       max-width: 100%; 
       max-height: 200px;
-      border: 1px solid #263241;
+      border: 1px solid #374151;
       border-radius: 8px; 
       display: none;
     }
     
-    .status { margin-top: 12px; font-size: 13px; }
+    .status { 
+      margin-top: 20px; 
+      font-size: 14px; 
+      font-weight: 500; 
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+    }
     
-    .hint { color: #9ca3af; font-size: 12px; margin-top: 8px; }
+    .status.success { 
+      background: rgba(34, 197, 94, 0.1); 
+      color: #4ade80; 
+      border-color: rgba(34, 197, 94, 0.2);
+    }
+    .status.error { 
+      background: rgba(239, 68, 68, 0.1); 
+      color: #f87171; 
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+    .status.warning { 
+      background: rgba(251, 146, 60, 0.1); 
+      color: #fbbf24; 
+      border-color: rgba(251, 146, 60, 0.2);
+    }
+    .status.info { 
+      background: rgba(20, 184, 166, 0.1); 
+      color: #5eead4; 
+      border-color: rgba(20, 184, 166, 0.2);
+    }
     
-    @media (max-width: 768px) { .container { margin: 20px auto; padding: 16px; } }
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top: 2px solid #14b8a6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    button:disabled {
+      background: rgba(75, 85, 99, 0.5) !important;
+      color: rgba(255,255,255,0.4) !important;
+      cursor: not-allowed !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    
+    #turnon.lights-on .bulb { 
+      background: linear-gradient(135deg, #fb923c, #f97316);
+      box-shadow: 
+        0 0 30px rgba(251, 146, 60, 0.8),
+        0 0 60px rgba(251, 146, 60, 0.4),
+        0 0 90px rgba(251, 146, 60, 0.2);
+      transform: scale(1.3);
+    }
+    
+    #turnon.lights-on .login-form { 
+      opacity: 1; 
+      visibility: visible; 
+      transform: translate(-50%, -50%) translateY(0);
+    }
+    
+    #turnon.lights-on .login-text { 
+      opacity: 1; 
+      transform: translateX(-50%) translateY(0);
+    }
+    
+    #turnon.lights-on .illumination {
+      opacity: 1;
+      width: 800px;
+      height: 600px;
+      animation: illuminate 2s ease-out;
+    }
+    
+    #turnon.lights-on .central-toggle {
+      animation: none;
+    }
+    
+    .central-toggle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 20;
+      box-shadow: 
+        0 8px 32px rgba(20, 184, 166, 0.3),
+        0 0 0 0 rgba(20, 184, 166, 0.4);
+      animation: pulse 2s infinite;
+    }
+    
+    .central-toggle:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      box-shadow: 
+        0 12px 40px rgba(20, 184, 166, 0.4),
+        0 0 0 10px rgba(20, 184, 166, 0.1);
+    }
+    
+    .central-toggle.lights-on {
+      background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+      box-shadow: 
+        0 8px 32px rgba(251, 146, 60, 0.3),
+        0 0 0 0 rgba(251, 146, 60, 0.4);
+      top: auto;
+      bottom: 20px;
+      transform: translateX(-50%);
+    }
+    
+    .central-toggle.lights-on:hover {
+      box-shadow: 
+        0 12px 40px rgba(251, 146, 60, 0.4),
+        0 0 0 10px rgba(251, 146, 60, 0.1);
+      transform: translateX(-50%) scale(1.1);
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 8px 32px rgba(20, 184, 166, 0.3), 0 0 0 0 rgba(20, 184, 166, 0.4); }
+      70% { box-shadow: 0 8px 32px rgba(20, 184, 166, 0.3), 0 0 0 10px rgba(20, 184, 166, 0); }
+      100% { box-shadow: 0 8px 32px rgba(20, 184, 166, 0.3), 0 0 0 0 rgba(20, 184, 166, 0); }
+    }
+    
+    @keyframes illuminate {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    
+    .animated-text {
+      font-size: 22px;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      margin-bottom: 18px;
+      background: linear-gradient(90deg, #ff7e5f, #feb47b, #ff7e5f);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 3s linear infinite;
+    }
+
+    @keyframes shine {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+    
+    @media (max-width: 768px) {
+      .login-form { 
+        width: 90%; 
+        padding: 24px; 
+      }
+      
+      .login-text { 
+        font-size: 28px; 
+      }
+      
+      .lamp, .turnoff {
+        top: 15%;
+      }
+      
+      .bulb {
+        top: calc(15% + 70px);
+      }
+      
+      .string {
+        top: calc(15% + 70px);
+      }
+      
+      .central-toggle.lights-on {
+        bottom: 15px;
+      }
+    }
   </style>
+   
 </head>
 <body>
-  <div class="container">
-    <div class="title">Encrypt on Device A → Decrypt on Device B</div>
-    <div class="subtitle">Only the PNG and your password are needed on Device B. No extra files.</div>
-    <div class="card">
+  
+  <div id="turnon">
+    <div class="lamp" onclick="toggleLights()"></div>
+    <div style="
+      position: fixed; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%); 
+      text-align: center;
+    ">
+   
+      <h1 class="animated-text">IMAGE ENCRYPTION</h1>
+<p class="animated-text">
+    To see BATCH -15 CNS Project click button below
+</p>
+
+      <button 
+        id="centralToggle" 
+        style="
+          background: linear-gradient(135deg, #f1e8e1, #f97316);
+          color: rgb(1, 1, 1);
+          padding: 10px 24px;
+          width: fit-content;
+          border-radius: 999px;
+          font-size: 18px;
+          font-weight: 700;
+          box-shadow: 0 6px 14px rgba(251, 146, 60, 0.45);
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
+          margin: 0 auto;
+        "
+      >
+        BATCH-15
+      </button>
+    </div>
+    <div class="string"></div>
+    <div class="bulb"></div>
+    <div class="illumination"></div>
+    
+   
+    
+    <div class="login-form">
+      <h2>🔐 Secure Image Vault</h2>
+      <p class="explain">Steganography mode: this app embeds encrypted file bytes inside a PNG so you can encrypt on one machine and safely decrypt on another using the same password. Use the "Encrypt" mode to create the stego-PNG and transfer it to the other system for "Decrypt".</p>
+      
       <div class="form-group">
         <label for="mode">Select Operation:</label>
         <select id="mode">
           <option value="">-- Choose Mode --</option>
-          <option value="encrypt">🔒 Encrypt (output: encrypted PNG)</option>
-          <option value="decrypt">🔓 Decrypt (restore original file)</option>
+          <option value="encrypt">🔒 Encrypt (Secure PNG Output)</option>
+          <option value="decrypt">🔓 Decrypt (Restore Original)</option>
         </select>
       </div>
+      
       <div class="form-group">
         <label for="fileInput" id="fileLabel">Upload File to Encrypt:</label>
         <input type="file" id="fileInput" accept="*/*">
         <div class="hint">Device A: choose any file (e.g., test.pdf, song.mp3). Output is PNG.</div>
       </div>
+      
       <div class="form-group">
         <label for="key">Secret Password:</label>
         <input type="password" id="key" placeholder="Enter your secret password">
         <div class="hint">Use the same password on Device B to decrypt from the PNG.</div>
       </div>
-      <button id="goBtn">Process</button>
+      
+      <button id="goBtn">🚀 Process File</button>
+      
       <img id="preview" class="preview" />
       <div id="status" class="status"></div>
       <canvas id="canvas" style="display:none;"></canvas>
@@ -147,22 +552,18 @@ function generateSubstitutionTable(password, salt, imageHash, rounds = 3) {
   const combined = password + salt + imageHash;
   const hash = CryptoJS.SHA256(combined).toString();
   
-  // Initialize substitution table with identity mapping
   const table = new Uint8Array(256);
   for (let i = 0; i < 256; i++) {
     table[i] = i;
   }
   
-  // Shuffle table based on hash with multiple rounds for security
   for (let round = 0; round < rounds; round++) {
     const roundHash = CryptoJS.SHA256(hash + round + imageHash).toString();
     
     for (let i = 0; i < 256; i++) {
-      // Use hash bytes to determine swap positions
       const hashIndex = (i * 2) % roundHash.length;
       const swapIndex = parseInt(roundHash.substr(hashIndex, 2), 16);
       
-      // Swap current position with hash-determined position
       const temp = table[i];
       table[i] = table[swapIndex];
       table[swapIndex] = temp;
@@ -219,39 +620,37 @@ function encryptedDataToPNG(encryptedData) {
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
   
-  // Calculate canvas dimensions (square-ish)
   const dataLength = encryptedData.length;
-  const width = Math.ceil(Math.sqrt(dataLength / 3)); // 3 bytes per pixel (RGB)
+  const width = Math.ceil(Math.sqrt(dataLength / 3));
   const height = Math.ceil(dataLength / (width * 3));
   
   canvas.width = width;
   canvas.height = height;
   
-  // Create image data
   const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
   
   let dataIndex = 0;
   for (let i = 0; i < pixels.length; i += 4) {
     if (dataIndex < dataLength) {
-      pixels[i] = encryptedData[dataIndex++];     // R
+      pixels[i] = encryptedData[dataIndex++];
     } else {
-      pixels[i] = Math.floor(Math.random() * 256); // R (random noise)
+      pixels[i] = Math.floor(Math.random() * 256);
     }
     
     if (dataIndex < dataLength) {
-      pixels[i + 1] = encryptedData[dataIndex++]; // G
+      pixels[i + 1] = encryptedData[dataIndex++];
     } else {
-      pixels[i + 1] = Math.floor(Math.random() * 256); // G (random noise)
+      pixels[i + 1] = Math.floor(Math.random() * 256);
     }
     
     if (dataIndex < dataLength) {
-      pixels[i + 2] = encryptedData[dataIndex++]; // B
+      pixels[i + 2] = encryptedData[dataIndex++];
     } else {
-      pixels[i + 2] = Math.floor(Math.random() * 256); // B (random noise)
+      pixels[i + 2] = Math.floor(Math.random() * 256);
     }
     
-    pixels[i + 3] = 255; // A (always fully opaque)
+    pixels[i + 3] = 255;
   }
   
   ctx.putImageData(imageData, 0, 0);
@@ -279,22 +678,20 @@ async function pngToEncryptedData(file) {
       
       const rgbData = [];
       for (let i = 0; i < pixels.length; i += 4) {
-        rgbData.push(pixels[i]);     // R
-        rgbData.push(pixels[i + 1]); // G
-        rgbData.push(pixels[i + 2]); // B
-        // Skip alpha channel (pixels[i + 3])
+        rgbData.push(pixels[i]);
+        rgbData.push(pixels[i + 1]);
+        rgbData.push(pixels[i + 2]);
       }
       
       if (rgbData.length < 110) {
         reject(new Error("Invalid encrypted file header"));
         return;
       }
-      // filenameLen (2 bytes) + cipherLen (4 bytes)
+      
       const filenameLen = (rgbData[104] << 8) | rgbData[105];
       const cipherDataLength = (rgbData[106] << 24) | (rgbData[107] << 16) | (rgbData[108] << 8) | rgbData[109];
       const totalDataLength = 110 + filenameLen + cipherDataLength;
       
-      // Validate data length
       if (totalDataLength > rgbData.length || cipherDataLength <= 0) {
         reject(new Error("Corrupted encrypted file - invalid data length"));
         return;
@@ -314,21 +711,19 @@ async function pngToEncryptedData(file) {
 }
 
 /* ======== Enhanced Monoalphabetic File Encryption ======== */
-async function encryptFile(file, password){
+async function encryptFile(file, password) {
   const arrayBuffer = await file.arrayBuffer();
   const plain = new Uint8Array(arrayBuffer);
 
   const imageHashWords = CryptoJS.SHA256(CryptoJS.lib.WordArray.create(plain));
   const imageHash = imageHashWords.toString();
 
-  // Generate cryptographically secure salt
   const saltWords = CryptoJS.lib.WordArray.random(16);
   const salt = wordArrayToUa(saltWords);
   const saltString = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
 
   const substitutionTable = generateSubstitutionTable(password, saltString, imageHash, 5);
   
-  // Apply monoalphabetic encryption with multiple passes for security
   let encrypted = new Uint8Array(plain);
   for (let pass = 0; pass < 3; pass++) {
     const passTable = generateSubstitutionTable(password + pass, saltString, imageHash, 3);
@@ -344,16 +739,14 @@ async function encryptFile(file, password){
   const filenameLen = filenameBytes.length;
 
   const imageHashBytes = new TextEncoder().encode(imageHash.padEnd(64, '\0').substring(0, 64));
-  const header = new Uint8Array(8 + 16 + 16 + 64 + 2 + 4); // + filenameLen(2) + cipherLen(4)
+  const header = new Uint8Array(8 + 16 + 16 + 64 + 2 + 4);
   header.set(MAGIC, 0);
   header.set(originalType, 8);
   header.set(salt, 24);
   header.set(imageHashBytes, 40);
   
-  // filename length (2 bytes, BE)
   header[104] = (filenameLen >> 8) & 0xFF;
   header[105] = filenameLen & 0xFF;
-  // cipher length (4 bytes, BE)
   const lengthBytes = new Uint8Array(4);
   lengthBytes[0] = (encrypted.length >> 24) & 0xFF;
   lengthBytes[1] = (encrypted.length >> 16) & 0xFF;
@@ -361,7 +754,6 @@ async function encryptFile(file, password){
   lengthBytes[3] = encrypted.length & 0xFF;
   header.set(lengthBytes, 106);
 
-  // Combine header + filename + encrypted data
   const encryptedData = new Uint8Array(header.length + filenameBytes.length + encrypted.length);
   encryptedData.set(header, 0);
   encryptedData.set(filenameBytes, header.length);
@@ -371,7 +763,7 @@ async function encryptFile(file, password){
 }
 
 /* ======== Enhanced Monoalphabetic File Decryption ======== */
-async function decryptFile(file, password){
+async function decryptFile(file, password) {
   try {
     const encryptedData = await pngToEncryptedData(file);
     
@@ -379,10 +771,9 @@ async function decryptFile(file, password){
       throw new Error("❌ Invalid encrypted file - file too small or corrupted");
     }
     
-    // Verify magic header for monoalphabetic format
     const MAGIC = new TextEncoder().encode("MONOIMG1");
-    for(let i = 0; i < MAGIC.length; i++){ 
-      if(encryptedData[i] !== MAGIC[i]) {
+    for (let i = 0; i < MAGIC.length; i++) { 
+      if (encryptedData[i] !== MAGIC[i]) {
         throw new Error("❌ This is not a valid monoalphabetic encrypted image file. Please select a PNG file that was encrypted by this app."); 
       }
     }
@@ -396,20 +787,18 @@ async function decryptFile(file, password){
     const imageHashBytes = encryptedData.slice(40, 104);
     const imageHash = new TextDecoder().decode(imageHashBytes).replace(/\0/g, '');
     
-    // Read filename length and cipher data length
     const filenameLen = (encryptedData[104] << 8) | encryptedData[105];
-    const cipherLength = (encryptedData[106] << 24) | (encryptedData[107] << 16) | (encryptedData[108] << 8) | encryptedData[109];
+    const cipherDataLength = (encryptedData[106] << 24) | (encryptedData[107] << 16) | (encryptedData[108] << 8) | encryptedData[109];
     const nameStart = 110;
     const nameEnd = 110 + filenameLen;
     const filenameBytes = encryptedData.slice(nameStart, nameEnd);
     const originalName = new TextDecoder().decode(filenameBytes);
-    const cipherBytes = encryptedData.slice(nameEnd, nameEnd + cipherLength);
+    const cipherBytes = encryptedData.slice(nameEnd, nameEnd + cipherDataLength);
 
-    if (cipherBytes.length === 0 || cipherBytes.length !== cipherLength) {
+    if (cipherBytes.length === 0 || cipherBytes.length !== cipherDataLength) {
       throw new Error("❌ Corrupted encrypted file - cipher data mismatch");
     }
 
-    // Apply reverse monoalphabetic decryption (3 passes in reverse order)
     let decrypted = new Uint8Array(cipherBytes);
     for (let pass = 2; pass >= 0; pass--) {
       const passTable = generateSubstitutionTable(password + pass, saltString, imageHash, 3);
@@ -447,24 +836,37 @@ const centralToggle = document.getElementById('centralToggle');
 const turnOnDiv = document.getElementById('turnon');
 let lightsOn = false;
 
-// Minimal UI: removed lamp/toggle
+function toggleLights() {
+  lightsOn = !lightsOn;
+  
+  if (lightsOn) {
+    turnOnDiv.classList.add('lights-on');
+    centralToggle.classList.add('lights-on');
+    centralToggle.textContent = '🔆';
+  } else {
+    turnOnDiv.classList.remove('lights-on');
+    centralToggle.classList.remove('lights-on');
+    centralToggle.textContent = '💡';
+  }
+}
+
+centralToggle.addEventListener('click', toggleLights);
 
 goBtn.addEventListener("click", async () => {
   const mode = modeSel.value;
   const file = fileInput.files[0];
   const password = keyInput.value;
 
-  // Validation
-  if(!mode) { setStatus("⚠️ Please select an operation mode", "warning"); return; }
-  if(!file) { setStatus("⚠️ Please upload a file", "warning"); return; }
-  if(!password) { setStatus("⚠️ Please enter a secret password", "warning"); return; }
-  if(password.length < 6) { setStatus("⚠️ Password must be at least 6 characters", "warning"); return; }
+  if (!mode) { setStatus("⚠️ Please select an operation mode", "warning"); return; }
+  if (!file) { setStatus("⚠️ Please upload a file", "warning"); return; }
+  if (!password) { setStatus("⚠️ Please enter a secret password", "warning"); return; }
+  if (password.length < 6) { setStatus("⚠️ Password must be at least 6 characters", "warning"); return; }
 
   goBtn.disabled = true;
   preview.style.display = "none";
 
   try {
-    if(mode === "encrypt") {
+    if (mode === "encrypt") {
       setStatus("🔒 Encrypting your file...", "loading");
       const startTime = Date.now();
       
@@ -473,14 +875,14 @@ goBtn.addEventListener("click", async () => {
       
       preview.src = URL.createObjectURL(encryptedBlob);
       preview.style.display = "block";
-      preview.style.imageRendering = "pixelated"; // Show encrypted noise pattern clearly
-      preview.style.border = "2px solid rgba(255, 235, 131, 0.3)"; // Golden border for encrypted images
+      preview.style.imageRendering = "pixelated";
+      preview.style.border = "2px solid rgba(255, 235, 131, 0.3)";
       
       const fileSizeKB = (encryptedBlob.size / 1024).toFixed(1);
       setStatus(`✅ File encrypted successfully in ${duration}s! Encrypted as PNG (${fileSizeKB}KB).`, "success");
       downloadBlob(encryptedBlob, `encrypted_${file.name.split('.')[0]}.png`);
       
-    } else if(mode === "decrypt") {
+    } else if (mode === "decrypt") {
       setStatus("🔓 Decrypting your file...", "loading");
       const startTime = Date.now();
       
@@ -490,8 +892,8 @@ goBtn.addEventListener("click", async () => {
       if ((decryptedBlob.type || '').startsWith('image/')) {
         preview.src = URL.createObjectURL(decryptedBlob);
         preview.style.display = "block";
-        preview.style.imageRendering = "auto"; // Smooth rendering for original images
-        preview.style.border = "2px solid rgba(72, 187, 120, 0.3)"; // Green border for decrypted images
+        preview.style.imageRendering = "auto";
+        preview.style.border = "2px solid rgba(72, 187, 120, 0.3)";
       } else {
         preview.style.display = "none";
       }
@@ -500,7 +902,7 @@ goBtn.addEventListener("click", async () => {
       setStatus(`🎉 File decrypted successfully in ${duration}s! Original restored (${fileSizeKB}KB).`, "success");
       downloadBlob(decryptedBlob, originalName);
     }
-  } catch(err) {
+  } catch (err) {
     console.error("Encryption/Decryption error:", err);
     setStatus(err?.message || "❌ Operation failed - please try again", "error");
     preview.style.display = "none";
@@ -509,18 +911,17 @@ goBtn.addEventListener("click", async () => {
   }
 });
 
-// Dynamic label updates
 modeSel.addEventListener("change", () => {
   const label = document.getElementById("fileLabel");
-  keyInput.value = ""; // Clear secret password
-  fileInput.value = ""; // Clear file upload
-  preview.style.display = "none"; // Hide preview
-  document.getElementById("status").textContent = ""; // Clear status
+  keyInput.value = "";
+  fileInput.value = "";
+  preview.style.display = "none";
+  document.getElementById("status").textContent = "";
   
-  if(modeSel.value === "encrypt") {
+  if (modeSel.value === "encrypt") {
     label.textContent = "Upload File to Encrypt:";
     fileInput.accept = "*/*";
-  } else if(modeSel.value === "decrypt") {
+  } else if (modeSel.value === "decrypt") {
     label.textContent = "Upload Encrypted PNG Image:";
     fileInput.accept = ".png,image/png";
   } else {
@@ -529,7 +930,6 @@ modeSel.addEventListener("change", () => {
   }
 });
 
-// File drag and drop support
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
   fileInput.addEventListener(eventName, preventDefaults, false);
 });
@@ -547,6 +947,5 @@ function handleDrop(e) {
   fileInput.files = files;
 }
 </script>
-
 </body>
 </html>
