@@ -189,10 +189,17 @@
     
     .login-form h2 { 
       color: #f8fafc;
-      margin-bottom: 32px; 
+      margin-bottom: 12px; 
       font-size: 24px;
       font-weight: 700;
       letter-spacing: 1px;
+    }
+
+    .login-form p.explain {
+      color: #cbd5e1;
+      font-size: 13px;
+      margin-bottom: 18px;
+      opacity: 0.9;
     }
     
     .form-group { 
@@ -501,13 +508,7 @@
   </button>
 </div>
 
-
-
-
-
-
-
-
+    
     
     <div class="string"></div>
     <div class="bulb"></div>
@@ -517,10 +518,12 @@
     <div class="login-text">
       IMAGE ENCRYPTION
       <span class="subtitle">Click the button to begin</span>
+      <span class="subtitle" style="margin-top:8px; font-weight:600;">Steganography — encrypt on one system, decrypt on another</span>
     </div>
     
     <div class="login-form">
       <h2>🔐 Secure Image Vault</h2>
+      <p class="explain">Steganography mode: this app embeds encrypted file bytes inside a PNG so you can encrypt on one machine and safely decrypt on another using the same password. Use the "Encrypt" mode to create the stego-PNG and transfer it to the other system for "Decrypt".</p>
       
       <div class="form-group">
         <label for="mode">Select Operation:</label>
