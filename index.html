@@ -189,17 +189,10 @@
     
     .login-form h2 { 
       color: #f8fafc;
-      margin-bottom: 12px; 
+      margin-bottom: 32px; 
       font-size: 24px;
       font-weight: 700;
       letter-spacing: 1px;
-    }
-
-    .login-form p.explain {
-      color: #cbd5e1;
-      font-size: 13px;
-      margin-bottom: 18px;
-      opacity: 0.9;
     }
     
     .form-group { 
@@ -508,7 +501,13 @@
   </button>
 </div>
 
-    
+
+
+
+
+
+
+
     
     <div class="string"></div>
     <div class="bulb"></div>
@@ -518,12 +517,10 @@
     <div class="login-text">
       IMAGE ENCRYPTION
       <span class="subtitle">Click the button to begin</span>
-      <span class="subtitle" style="margin-top:8px; font-weight:600;">Steganography — encrypt on one system, decrypt on another</span>
     </div>
     
     <div class="login-form">
       <h2>🔐 Secure Image Vault</h2>
-      <p class="explain">Steganography mode: this app embeds encrypted file bytes inside a PNG so you can encrypt on one machine and safely decrypt on another using the same password. Use the "Encrypt" mode to create the stego-PNG and transfer it to the other system for "Decrypt".</p>
       
       <div class="form-group">
         <label for="mode">Select Operation:</label>
@@ -535,8 +532,8 @@
       </div>
       
       <div class="form-group">
-        <label for="fileInput" id="fileLabel">Upload Original Image (PNG/JPG):</label>
-        <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
+        <label for="fileInput" id="fileLabel">Upload File to Encrypt:</label>
+        <input type="file" id="fileInput" accept="*/*">
       </div>
       
       <div class="form-group">
@@ -713,13 +710,14 @@ async function pngToEncryptedData(file) {
         // Skip alpha channel (pixels[i + 3])
       }
       
-      if (rgbData.length < 108) {
+      if (rgbData.length < 110) {
         reject(new Error("Invalid encrypted file header"));
         return;
       }
-      
-      const cipherDataLength = (rgbData[104] << 24) | (rgbData[105] << 16) | (rgbData[106] << 8) | rgbData[107];
-      const totalDataLength = 108 + cipherDataLength; // Updated header size
+      // filenameLen (2 bytes) + cipherLen (4 bytes)
+      const filenameLen = (rgbData[104] << 8) | rgbData[105];
+      const cipherDataLength = (rgbData[106] << 24) | (rgbData[107] << 16) | (rgbData[108] << 8) | rgbData[109];
+      const totalDataLength = 110 + filenameLen + cipherDataLength;
       
       // Validate data length
       if (totalDataLength > rgbData.length || cipherDataLength <= 0) {
@@ -763,27 +761,36 @@ async function encryptFile(file, password){
   }
 
   const MAGIC = new TextEncoder().encode("MONOIMG1");
-  const originalType = new TextEncoder().encode(file.type.padEnd(16, '\0').substring(0, 16));
+  const originalType = new TextEncoder().encode((file.type || 'application/octet-stream').padEnd(16, '\0').substring(0, 16));
   
+  const encoder = new TextEncoder();
+  let filenameBytes = encoder.encode(file.name || 'file');
+  if (filenameBytes.length > 65535) filenameBytes = filenameBytes.slice(0, 65535);
+  const filenameLen = filenameBytes.length;
+
   const imageHashBytes = new TextEncoder().encode(imageHash.padEnd(64, '\0').substring(0, 64));
-  const header = new Uint8Array(8 + 16 + 16 + 64 + 4); // magic + originalType + salt + imageHash + length
+  const header = new Uint8Array(8 + 16 + 16 + 64 + 2 + 4); // + filenameLen(2) + cipherLen(4)
   header.set(MAGIC, 0);
   header.set(originalType, 8);
   header.set(salt, 24);
   header.set(imageHashBytes, 40);
   
-  // Store cipher data length in header for exact extraction
+  // filename length (2 bytes, BE)
+  header[104] = (filenameLen >> 8) & 0xFF;
+  header[105] = filenameLen & 0xFF;
+  // cipher length (4 bytes, BE)
   const lengthBytes = new Uint8Array(4);
   lengthBytes[0] = (encrypted.length >> 24) & 0xFF;
   lengthBytes[1] = (encrypted.length >> 16) & 0xFF;
   lengthBytes[2] = (encrypted.length >> 8) & 0xFF;
   lengthBytes[3] = encrypted.length & 0xFF;
-  header.set(lengthBytes, 104); // Updated position after adding imageHash
+  header.set(lengthBytes, 106);
 
-  // Combine header + encrypted data
-  const encryptedData = new Uint8Array(header.length + encrypted.length);
+  // Combine header + filename + encrypted data
+  const encryptedData = new Uint8Array(header.length + filenameBytes.length + encrypted.length);
   encryptedData.set(header, 0);
-  encryptedData.set(encrypted, header.length);
+  encryptedData.set(filenameBytes, header.length);
+  encryptedData.set(encrypted, header.length + filenameBytes.length);
 
   return await encryptedDataToPNG(encryptedData);
 }
@@ -793,7 +800,7 @@ async function decryptFile(file, password){
   try {
     const encryptedData = await pngToEncryptedData(file);
     
-    if (encryptedData.length < 108) {
+    if (encryptedData.length < 110) {
       throw new Error("❌ Invalid encrypted file - file too small or corrupted");
     }
     
@@ -814,9 +821,14 @@ async function decryptFile(file, password){
     const imageHashBytes = encryptedData.slice(40, 104);
     const imageHash = new TextDecoder().decode(imageHashBytes).replace(/\0/g, '');
     
-    // Read the exact cipher data length
-    const cipherLength = (encryptedData[104] << 24) | (encryptedData[105] << 16) | (encryptedData[106] << 8) | encryptedData[107];
-    const cipherBytes = encryptedData.slice(108, 108 + cipherLength); // Updated slice position
+    // Read filename length and cipher data length
+    const filenameLen = (encryptedData[104] << 8) | encryptedData[105];
+    const cipherLength = (encryptedData[106] << 24) | (encryptedData[107] << 16) | (encryptedData[108] << 8) | encryptedData[109];
+    const nameStart = 110;
+    const nameEnd = 110 + filenameLen;
+    const filenameBytes = encryptedData.slice(nameStart, nameEnd);
+    const originalName = new TextDecoder().decode(filenameBytes);
+    const cipherBytes = encryptedData.slice(nameEnd, nameEnd + cipherLength);
 
     if (cipherBytes.length === 0 || cipherBytes.length !== cipherLength) {
       throw new Error("❌ Corrupted encrypted file - cipher data mismatch");
@@ -834,7 +846,8 @@ async function decryptFile(file, password){
       throw new Error("🔑 Wrong password - unable to decrypt image data");
     }
     
-    return new Blob([decrypted], { type: originalType || "image/jpeg" });
+    const blob = new Blob([decrypted], { type: originalType || "application/octet-stream" });
+    return { blob, filename: originalName || "output" };
     
   } catch (error) {
     if (error.message.includes("Invalid encrypted file") || error.message.includes("monoalphabetic")) {
@@ -884,7 +897,7 @@ goBtn.addEventListener("click", async () => {
 
   // Validation
   if(!mode) { setStatus("⚠️ Please select an operation mode", "warning"); return; }
-  if(!file) { setStatus("⚠️ Please upload an image file", "warning"); return; }
+  if(!file) { setStatus("⚠️ Please upload a file", "warning"); return; }
   if(!password) { setStatus("⚠️ Please enter a secret password", "warning"); return; }
   if(password.length < 6) { setStatus("⚠️ Password must be at least 6 characters", "warning"); return; }
 
@@ -893,7 +906,7 @@ goBtn.addEventListener("click", async () => {
 
   try {
     if(mode === "encrypt") {
-      setStatus("🔒 Encrypting your image...", "loading");
+      setStatus("🔒 Encrypting your file...", "loading");
       const startTime = Date.now();
       
       const encryptedBlob = await encryptFile(file, password);
@@ -905,24 +918,28 @@ goBtn.addEventListener("click", async () => {
       preview.style.border = "2px solid rgba(255, 235, 131, 0.3)"; // Golden border for encrypted images
       
       const fileSizeKB = (encryptedBlob.size / 1024).toFixed(1);
-      setStatus(`✅ Image encrypted successfully in ${duration}s! Encrypted as visible PNG (${fileSizeKB}KB) with secure noise pattern.`, "success");
+      setStatus(`✅ File encrypted successfully in ${duration}s! Encrypted as PNG (${fileSizeKB}KB).`, "success");
       downloadBlob(encryptedBlob, `encrypted_${file.name.split('.')[0]}.png`);
       
     } else if(mode === "decrypt") {
-      setStatus("🔓 Decrypting your image...", "loading");
+      setStatus("🔓 Decrypting your file...", "loading");
       const startTime = Date.now();
       
-      const decryptedBlob = await decryptFile(file, password);
+      const { blob: decryptedBlob, filename: originalName } = await decryptFile(file, password);
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       
-      preview.src = URL.createObjectURL(decryptedBlob);
-      preview.style.display = "block";
-      preview.style.imageRendering = "auto"; // Smooth rendering for original images
-      preview.style.border = "2px solid rgba(72, 187, 120, 0.3)"; // Green border for decrypted images
+      if ((decryptedBlob.type || '').startsWith('image/')) {
+        preview.src = URL.createObjectURL(decryptedBlob);
+        preview.style.display = "block";
+        preview.style.imageRendering = "auto"; // Smooth rendering for original images
+        preview.style.border = "2px solid rgba(72, 187, 120, 0.3)"; // Green border for decrypted images
+      } else {
+        preview.style.display = "none";
+      }
       
       const fileSizeKB = (decryptedBlob.size / 1024).toFixed(1);
-      setStatus(`🎉 Image decrypted successfully in ${duration}s! Original image restored (${fileSizeKB}KB).`, "success");
-      downloadBlob(decryptedBlob, `decrypted_${file.name}`);
+      setStatus(`🎉 File decrypted successfully in ${duration}s! Original restored (${fileSizeKB}KB).`, "success");
+      downloadBlob(decryptedBlob, originalName);
     }
   } catch(err) {
     console.error("Encryption/Decryption error:", err);
@@ -942,14 +959,14 @@ modeSel.addEventListener("change", () => {
   document.getElementById("status").textContent = ""; // Clear status
   
   if(modeSel.value === "encrypt") {
-    label.textContent = "Upload Original Image (PNG/JPG):";
-    fileInput.accept = ".png,.jpg,.jpeg,image/png,image/jpeg";
+    label.textContent = "Upload File to Encrypt:";
+    fileInput.accept = "*/*";
   } else if(modeSel.value === "decrypt") {
     label.textContent = "Upload Encrypted PNG Image:";
     fileInput.accept = ".png,image/png";
   } else {
-    label.textContent = "Upload Image (PNG/JPG):";
-    fileInput.accept = ".png,.jpg,.jpeg,image/png,image/jpeg";
+    label.textContent = "Upload File:";
+    fileInput.accept = "*/*";
   }
 });
 
